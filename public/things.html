@@ -14,7 +14,7 @@
 	<script defer src="/__/firebase/5.9.1/firebase-auth.js">
 
 	</script>
-	<script defer src="/__/firebase/5.9.1/firebase-database.js">
+	<script defer src="/__/firebase/5.9.1/firebase-firestore.js">
 
 	</script>
 	<script defer src="/__/firebase/5.9.1/firebase-messaging.js">
@@ -112,38 +112,71 @@
 	<div id="sign-in-status"></div>
 	<div id="sign-in"></div>
 	<pre id="account-details"></pre>
+    
+    <h2>Things</h2>
+    <ul id="thing-list"></ul>
+    <h2>Create a new Thing</h2>
+    <form id="new-thing-form"
+        <label>Name</label>
+        <input name="name"></input>
+        <br>
+        <label>Type</label>
+        <select name="type">
+            <option>Person</option>
+            <option>Animal</option>
+            <option>Robot</option>
+        </select>
+        <br>
+        <label>Price</label>
+        <input name="price" type="number"></input>
+        <br>
+        <button type="button" id="save-thing-button">Save</input>
+    </form>
 </body>
 <script>
-	document.addEventListener('DOMContentLoaded', function() {
+	document.addEventListener('DOMContentLoaded', function() {        
+        let db = firebase.firestore();
+        let loadItems = () => {
+            let thingList = document.getElementById('thing-list');
+            while (thingList.firstChild) {
+                thingList.removeChild(thingList.firstChild);
+            }
+            db.collection('things').get().then((things) => {
+                things.forEach((thing) => {
+                    let li = document.createElement('li');
+                    let thingData = thing.data();
+                    li.innerText = thingData.type + ': ' + thingData.name + ', $' + thingData.price;
+                    thingList.appendChild(li);
+                });
+            });
+        }
+
+
         firebase.auth().onAuthStateChanged(function(user) {
             if (user) {
-                // User is signed in.
-                var displayName = user.displayName;
-                var email = user.email;
-                var emailVerified = user.emailVerified;
-                var photoURL = user.photoURL;
-                var uid = user.uid;
-                var phoneNumber = user.phoneNumber;
-                var providerData = user.providerData;
-                user.getIdToken().then(function(accessToken) {
-                    document.getElementById('sign-in-status').textContent = 'Signed in';
-                    document.getElementById('sign-in').textContent = 'Sign out';
-                    document.getElementById('account-details').textContent = JSON.stringify({
-                        displayName: displayName,
-                        email: email,
-                        emailVerified: emailVerified,
-                        phoneNumber: phoneNumber,
-                        photoURL: photoURL,
-                        uid: uid,
-                        accessToken: accessToken,
-                        providerData: providerData
-                    }, null, '  ');
-                });
+                loadItems();
             } else {
                 window.location = '/';
             }
         }, function(error) {
             console.log(error);
+        });
+
+        let form = document.getElementById('new-thing-form');
+        let button = document.getElementById('save-thing-button');
+        button.addEventListener('click', () => {
+            db.collection('things').add({
+                name: form.elements[0].value,
+                type: form.elements[1].value,
+                price: form.elements[2].value
+            })
+            .then(function(docRef) {
+                console.log("Thing written with ID: ", docRef.id);
+                loadItems();
+            })
+            .catch(function(error) {
+                console.error("Error adding thing: ", error);
+            });
         });
     });
 </script>
